@@ -3,7 +3,7 @@ import convertColor from 'color-convert';
 import updateLog from 'log-update';
 import chalk from '../source/index.js';
 
-const ignoreCharacters = /[^\u{0021}-\u{007E}]/gu;
+const ignoreCharacters = /[^\u{0021}-\u{007E}]/gv;
 
 function rainbow(string, offset) {
 	if (!string || string.length === 0) {

@@ -22,8 +22,8 @@ export function stringEncaseCRLFWithFirstIndex(string, prefix, postfix, index) {
 	let endIndex = 0;
 	let returnValue = '';
 	do {
-		const gotCR = string[index - 1] === '\r';
-		returnValue += string.slice(endIndex, (gotCR ? index - 1 : index)) + prefix + (gotCR ? '\r\n' : '\n') + postfix;
+		const isGotCR = string[index - 1] === '\r';
+		returnValue += string.slice(endIndex, (isGotCR ? index - 1 : index)) + prefix + (isGotCR ? '\r\n' : '\n') + postfix;
 		endIndex = index + 1;
 		index = string.indexOf('\n', endIndex);
 	} while (index !== -1);

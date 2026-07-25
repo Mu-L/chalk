@@ -22,7 +22,7 @@ const levelMapping = [
 const styles = Object.create(null);
 
 const applyOptions = (object, options = {}) => {
-	if (options.level && !(Number.isInteger(options.level) && options.level >= 0 && options.level <= 3)) {
+	if (options.level && !(Number.isSafeInteger(options.level) && options.level >= 0 && options.level <= 3)) {
 		throw new Error('The `level` option should be an integer from 0 to 3');
 	}
 
@@ -51,6 +51,7 @@ function createChalk(options) {
 	return chalkFactory(options);
 }
 
+// eslint-disable-next-line unicorn/no-top-level-side-effects -- The prototype chain must be set up at module load.
 Object.setPrototypeOf(createChalk.prototype, Function.prototype);
 
 for (const [styleName, style] of Object.entries(ansiStyles)) {
@@ -185,6 +186,7 @@ const createBuilder = (self, _styler, _isEmpty) => {
 const applyStyle = (self, string) => {
 	// Read the level directly off the generator to skip the `level` getter dispatch on this hot path
 	if (self[GENERATOR].level <= 0 || !string) {
+		// eslint-disable-next-line unicorn/no-computed-property-existence-check -- Reads the boolean value, not a property existence check.
 		return self[IS_EMPTY] ? '' : string;
 	}
 
@@ -195,7 +197,7 @@ const applyStyle = (self, string) => {
 	}
 
 	const {openAll, closeAll} = styler;
-	if (string.includes('\u001B')) {
+	if (string.includes('\u{1B}')) {
 		while (styler !== undefined) {
 			// Replace any instances already present with a re-opening code
 			// otherwise only the part of the string until said closing code
@@ -217,6 +219,7 @@ const applyStyle = (self, string) => {
 	return openAll + string + closeAll;
 };
 
+// eslint-disable-next-line unicorn/no-top-level-side-effects -- The style getters must be installed at module load.
 Object.defineProperties(createChalk.prototype, styles);
 
 const chalk = createChalk();

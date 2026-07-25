@@ -1,10 +1,10 @@
 const ANSI_BACKGROUND_OFFSET = 10;
 
-const wrapAnsi16 = (offset = 0) => code => `\u001B[${code + offset}m`;
+const wrapAnsi16 = (offset = 0) => code => `\u{1B}[${code + offset}m`;
 
-const wrapAnsi256 = (offset = 0) => code => `\u001B[${38 + offset};5;${code}m`;
+const wrapAnsi256 = (offset = 0) => code => `\u{1B}[${38 + offset};5;${code}m`;
 
-const wrapAnsi16m = (offset = 0) => (red, green, blue) => `\u001B[${38 + offset};2;${red};${green};${blue}m`;
+const wrapAnsi16m = (offset = 0) => (red, green, blue) => `\u{1B}[${38 + offset};2;${red};${green};${blue}m`;
 
 const styles = {
 	modifier: {
@@ -76,8 +76,8 @@ function assembleStyles() {
 	for (const [groupName, group] of Object.entries(styles)) {
 		for (const [styleName, style] of Object.entries(group)) {
 			styles[styleName] = {
-				open: `\u001B[${style[0]}m`,
-				close: `\u001B[${style[1]}m`,
+				open: `\u{1B}[${style[0]}m`,
+				close: `\u{1B}[${style[1]}m`,
 			};
 
 			group[styleName] = styles[styleName];
@@ -96,8 +96,8 @@ function assembleStyles() {
 		enumerable: false,
 	});
 
-	styles.color.close = '\u001B[39m';
-	styles.bgColor.close = '\u001B[49m';
+	styles.color.close = '\u{1B}[39m';
+	styles.bgColor.close = '\u{1B}[49m';
 
 	styles.color.ansi = wrapAnsi16();
 	styles.color.ansi256 = wrapAnsi256();

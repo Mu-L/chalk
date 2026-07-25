@@ -19,7 +19,7 @@ for (const key of Object.keys(styles)) {
 		continue;
 	}
 
-	if (/^bg[^B]/.test(key)) {
+	if (/^bg[^B]/v.test(key)) {
 		returnValue = chalk.black(returnValue);
 	}
 

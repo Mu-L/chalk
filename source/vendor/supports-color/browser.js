@@ -3,15 +3,14 @@ const level = (() => {
 		return 0;
 	}
 
-	if (globalThis.navigator.userAgentData) {
-		// eslint-disable-next-line no-undef
+	if (navigator.userAgentData) {
 		const brand = navigator.userAgentData.brands.find(({brand}) => brand === 'Chromium');
 		if (brand && brand.version > 93) {
 			return 3;
 		}
 	}
 
-	if (/\b(?:Chrome|Chromium)\//.test(globalThis.navigator.userAgent)) {
+	if (/\b(?:Chrome|Chromium)\//.test(navigator.userAgent)) {
 		return 1;
 	}
 
