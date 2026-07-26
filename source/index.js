@@ -10,25 +10,36 @@ const {stdout: stdoutColor, stderr: stderrColor} = supportsColor;
 const GENERATOR = Symbol('GENERATOR');
 const STYLER = Symbol('STYLER');
 const IS_EMPTY = Symbol('IS_EMPTY');
-
-// `supportsColor.level` → `ansiStyles.color[name]` mapping
-const levelMapping = [
-	'ansi',
-	'ansi',
-	'ansi256',
-	'ansi16m',
-];
+const LEVEL = Symbol('LEVEL');
 
 const styles = Object.create(null);
 
+const assertValidLevel = level => {
+	if (!Number.isSafeInteger(level) || level < 0 || level > 3) {
+		throw new Error('The `level` should be an integer from 0 to 3');
+	}
+};
+
+// The level is stored under a symbol so the hot path can read it as a plain property, while `level` itself is an accessor that rejects values the rest of the code could not handle.
+const levelDescriptor = {
+	enumerable: true,
+	get() {
+		return this[LEVEL];
+	},
+	set(level) {
+		assertValidLevel(level);
+		this[LEVEL] = level;
+	},
+};
+
 const applyOptions = (object, options = {}) => {
-	if (options.level && !(Number.isSafeInteger(options.level) && options.level >= 0 && options.level <= 3)) {
-		throw new Error('The `level` option should be an integer from 0 to 3');
+	if (options.level !== undefined) {
+		assertValidLevel(options.level);
 	}
 
-	// Detect level if not set manually
+	// Detect level if not set manually. Written under the symbol rather than through `level`, as the prototype carrying that accessor is not installed until after this runs.
 	const colorLevel = stdoutColor ? stdoutColor.level : 0;
-	object.level = options.level === undefined ? colorLevel : options.level;
+	object[LEVEL] = options.level === undefined ? colorLevel : options.level;
 };
 
 export class Chalk {
@@ -72,28 +83,25 @@ styles.visible = {
 	},
 };
 
-const getModelAnsi = (model, level, type, ...arguments_) => {
+// Resolve a color model to one converter per `level`, so that a call only has to look up the converter for the current level instead of re-deciding the model and level every time.
+const createModelConverters = (model, type) => {
+	const style = ansiStyles[type];
+
 	if (model === 'rgb') {
-		if (level === 'ansi16m') {
-			return ansiStyles[type].ansi16m(...arguments_);
-		}
-
-		if (level === 'ansi256') {
-			return ansiStyles[type].ansi256(ansiStyles.rgbToAnsi256(...arguments_));
-		}
-
-		return ansiStyles[type].ansi(ansiStyles.rgbToAnsi(...arguments_));
+		const ansi = (red, green, blue) => style.ansi(ansiStyles.rgbToAnsi(red, green, blue));
+		const ansi256 = (red, green, blue) => style.ansi256(ansiStyles.rgbToAnsi256(red, green, blue));
+		return [ansi, ansi, ansi256, style.ansi16m];
 	}
 
 	if (model === 'hex') {
-		return getModelAnsi('rgb', level, type, ...ansiStyles.hexToRgb(...arguments_));
+		const ansi = hex => style.ansi(ansiStyles.hexToAnsi(hex));
+		const ansi256 = hex => style.ansi256(ansiStyles.hexToAnsi256(hex));
+		return [ansi, ansi, ansi256, hex => style.ansi16m(...ansiStyles.hexToRgb(hex))];
 	}
 
-	if (model === 'ansi256' && level === 'ansi') {
-		return ansiStyles[type].ansi(ansiStyles.ansi256ToAnsi(...arguments_));
-	}
-
-	return ansiStyles[type][model](...arguments_);
+	// `ansi256` is already the native form, so only the 16-color levels need converting.
+	const ansi = code => style.ansi(ansiStyles.ansi256ToAnsi(code));
+	return [ansi, ansi, style.ansi256, style.ansi256];
 };
 
 const usedModels = ['rgb', 'hex', 'ansi256'];
@@ -107,13 +115,19 @@ for (const model of usedModels) {
 		['underline' + capitalizedModel, 'underlineColor'],
 	]) {
 		const {close} = ansiStyles[type];
+		const converters = createModelConverters(model, type);
+
 		styles[styleName] = {
 			get() {
-				const {level} = this;
-				return function (...arguments_) {
-					const styler = createStyler(getModelAnsi(model, levelMapping[level], type, ...arguments_), close, this[STYLER]);
-					return createBuilder(this, styler, this[IS_EMPTY]);
+				// The level is read on call rather than captured here so the function can be cached on the instance instead of being reallocated on every property access.
+				// `rgb` is the widest model, so naming the three parameters avoids a rest array.
+				const styleFunction = function (first, second, third) {
+					const open = converters[this.level](first, second, third);
+					return createBuilder(this, createStyler(open, close, this[STYLER]), this[IS_EMPTY]);
 				};
+
+				Object.defineProperty(this, styleName, {value: styleFunction});
+				return styleFunction;
 			},
 		};
 	}
@@ -174,7 +188,8 @@ const createBuilder = (self, _styler, _isEmpty) => {
 	// no way to create a function with a different prototype
 	Object.setPrototypeOf(builder, proto);
 
-	builder[GENERATOR] = self;
+	// Point every builder at the root generator instead of its immediate parent, so reading the level costs one property load rather than walking a `level` getter per link of the chain.
+	builder[GENERATOR] = self[GENERATOR] ?? self;
 	builder[STYLER] = _styler;
 	builder[IS_EMPTY] = _isEmpty;
 
@@ -183,7 +198,7 @@ const createBuilder = (self, _styler, _isEmpty) => {
 
 const applyStyle = (self, string) => {
 	// Read the level directly off the generator to skip the `level` getter dispatch on this hot path
-	if (self[GENERATOR].level <= 0 || !string) {
+	if (self[GENERATOR][LEVEL] <= 0 || !string) {
 		// eslint-disable-next-line unicorn/no-computed-property-existence-check -- Reads the boolean value, not a property existence check.
 		return self[IS_EMPTY] ? '' : string;
 	}
@@ -217,8 +232,9 @@ const applyStyle = (self, string) => {
 	return openAll + string + closeAll;
 };
 
+// `level` lives on the prototype rather than on each instance, so it costs nothing to construct an instance and matches how builders already expose it. It is inherited rather than own, so it does not show up in `Object.keys()`, same as for a builder.
 // eslint-disable-next-line unicorn/no-top-level-side-effects -- The style getters must be installed at module load.
-Object.defineProperties(createChalk.prototype, styles);
+Object.defineProperties(createChalk.prototype, {...styles, level: levelDescriptor});
 
 const chalk = createChalk();
 export const chalkStderr = createChalk({level: stderrColor ? stderrColor.level : 0});

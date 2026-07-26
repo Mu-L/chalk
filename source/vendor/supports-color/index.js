@@ -30,30 +30,29 @@ if (
 	flagForceColor = 1;
 }
 
+// Whether `FORCE_COLOR` names a level. Shared with the exact-level check below so that the two cannot disagree on what counts as numeric.
+function hasNumericForceColor() {
+	return /^\d+$/.test(env.FORCE_COLOR);
+}
+
 function envForceColor() {
 	if (!('FORCE_COLOR' in env)) {
 		return;
-	}
-
-	if (env.FORCE_COLOR === 'true') {
-		return 1;
 	}
 
 	if (env.FORCE_COLOR === 'false') {
 		return 0;
 	}
 
-	if (env.FORCE_COLOR.length === 0) {
+	if (env.FORCE_COLOR === 'true' || env.FORCE_COLOR.length === 0) {
 		return 1;
 	}
 
-	const level = Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-
-	if (![0, 1, 2, 3].includes(level)) {
+	if (!hasNumericForceColor()) {
 		return;
 	}
 
-	return level;
+	return Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
 }
 
 function translateLevel(level) {
@@ -94,8 +93,8 @@ function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
 	}
 
 	// A numeric `FORCE_COLOR` requests an exact level, while `FORCE_COLOR=true` and `FORCE_COLOR=` only enable color and let the level be detected.
-	if (noFlagForceColor !== undefined && !Number.isNaN(Number.parseInt(env.FORCE_COLOR, 10))) {
-		return noFlagForceColor;
+	if (forceColor !== undefined && hasNumericForceColor()) {
+		return forceColor;
 	}
 
 	// Check for Azure DevOps pipelines.

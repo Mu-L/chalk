@@ -140,6 +140,8 @@ const customChalk = new Chalk({level: 0});
 | `2` | 256 color support |
 | `3` | Truecolor support (16 million colors) |
 
+Both the `level` option and the `level` property throw for anything that is not an integer from 0 to 3. Omit the option, or pass `undefined`, to have the level detected instead.
+
 ### supportsColor
 
 Detect whether the terminal [supports color](https://github.com/chalk/supports-color). Used internally and handled for you, but exposed for convenience.

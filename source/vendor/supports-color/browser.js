@@ -3,14 +3,14 @@ const level = (() => {
 		return 0;
 	}
 
-	if (navigator.userAgentData) {
-		const brand = navigator.userAgentData.brands.find(({brand}) => brand === 'Chromium');
-		if (brand && brand.version > 93) {
+	if (globalThis.navigator.userAgentData) {
+		const brand = globalThis.navigator.userAgentData.brands.find(({brand}) => brand === 'Chromium');
+		if (brand?.version > 93) {
 			return 3;
 		}
 	}
 
-	if (/\b(?:Chrome|Chromium)\//.test(navigator.userAgent)) {
+	if (/\b(?:Chrome|Chromium)\//.test(globalThis.navigator.userAgent)) {
 		return 1;
 	}
 

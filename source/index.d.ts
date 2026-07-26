@@ -20,8 +20,12 @@ export interface Options {
 	- `1` - Basic 16 colors support.
 	- `2` - ANSI 256 colors support.
 	- `3` - Truecolor 16 million colors support.
+
+	Omit this option, or pass `undefined`, to have the level detected instead.
+
+	@throws If the value is neither `undefined` nor an integer from 0 to 3.
 	*/
-	readonly level?: ColorSupportLevel;
+	readonly level?: ColorSupportLevel | undefined;
 }
 
 /**
@@ -42,6 +46,8 @@ export interface ChalkInstance {
 	- `1` - Basic 16 colors support.
 	- `2` - ANSI 256 colors support.
 	- `3` - Truecolor 16 million colors support.
+
+	@throws If the assigned value is not an integer from 0 to 3.
 	*/
 	level: ColorSupportLevel;
 

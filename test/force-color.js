@@ -64,3 +64,16 @@ test('a non-numeric `FORCE_COLOR` is treated as unset, not as disabled', async t
 	t.is(await detectLevel({FORCE_COLOR: 'unicorn', TF_BUILD: '1', AGENT_NAME: 'agent'}), '1');
 	t.is(await detectLevel({FORCE_COLOR: '0', TF_BUILD: '1', AGENT_NAME: 'agent'}), '0');
 });
+
+test('a partly numeric `FORCE_COLOR` is treated as unset, not as a level', async t => {
+	for (const forceColor of [' 2', '2 ', '2abc', '+2', '1e1', '0x2']) {
+		// eslint-disable-next-line no-await-in-loop
+		const [piped, azure] = await Promise.all([
+			detectLevel({FORCE_COLOR: forceColor, COLORTERM: 'truecolor'}),
+			detectLevel({FORCE_COLOR: forceColor, TF_BUILD: '1', AGENT_NAME: 'agent'}),
+		]);
+
+		t.is(piped, '0', `FORCE_COLOR=${forceColor}`);
+		t.is(azure, '1', `FORCE_COLOR=${forceColor}`);
+	}
+});

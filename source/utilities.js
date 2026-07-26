@@ -1,5 +1,5 @@
-// TODO: When targeting Node.js 16, use `String.prototype.replaceAll`.
-export function stringReplaceAll(string, substring, replacer) {
+// Note: Each match is kept and `postfix` is inserted after it. `String#replaceAll(substring, substring + postfix)` does the same, but it has to scan the replacement for `$` patterns and it is several times slower on the no-match path that most calls take.
+export function stringReplaceAll(string, substring, postfix) {
 	let index = string.indexOf(substring);
 	if (index === -1) {
 		return string;
@@ -9,7 +9,7 @@ export function stringReplaceAll(string, substring, replacer) {
 	let endIndex = 0;
 	let returnValue = '';
 	do {
-		returnValue += string.slice(endIndex, index) + substring + replacer;
+		returnValue += string.slice(endIndex, index) + substring + postfix;
 		endIndex = index + substringLength;
 		index = string.indexOf(substring, endIndex);
 	} while (index !== -1);
